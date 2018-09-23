@@ -53,6 +53,8 @@
  */
 int processor_container_delete(struct processor_container_cmd __user *user_cmd)
 {
+    struct task_struct *task=current;
+    printk("Thread id in delete  : ",(int)task->pid);
     return 0;
 }
 
@@ -66,6 +68,9 @@ int processor_container_delete(struct processor_container_cmd __user *user_cmd)
  */
 int processor_container_create(struct processor_container_cmd __user *user_cmd)
 {
+     struct processor_container_cmd userInfo;
+     copy_from_user(&userInfo,user_cmd,sizeof(userInfo));
+     printk("Container Id %d",(int)userInfo.cid);
     return 0;
 }
 
