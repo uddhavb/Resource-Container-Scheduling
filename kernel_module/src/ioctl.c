@@ -45,18 +45,19 @@
 #include <linux/sched.h>
 #include <linux/kthread.h>
 
-// structure for container list
-typedef struct container {
-    int cid;
-    threadObj *firsthreadObj;
-    struct container *next;
-} containerObj;
-
 // structure for thread list
-typedef struct thread {
+struct thread {
     int tid;
     struct thread *next;
-} threadObj;
+};
+
+// structure for container list
+struct container {
+    int cid;
+    struct thread *headThread;
+    struct container *next;
+};
+
 
 // memory allocation
 void *doMalloc (size_t sz) {
@@ -68,21 +69,64 @@ void *doMalloc (size_t sz) {
     return mem;
 }
 
-// add container to the start of the container list
-void addContainer (containerObj **first, char *new_cid) {
+// add container to the end of the container list
+void addContainer (struct container **head, int new_cid) {
 
-    containerObj *newest = doMalloc (sizeof (*newest));
-    newest->cid = *new_cid;
-    newest->next = *first;
-    *first = newest;
+   struct container *new_node = doMalloc(sizeof (new_node));
+   new_node->cid  = new_cid;
+   new_node->headThread = NULL;
+   new_node->next = NULL;
+   if(*head == NULL)
+     {
+         **head=*new_node;
+         return;
+     }
+  else {
+    struct thread *curr=*head;
+    while(curr->next!=NULL)
+    {
+      curr=curr->next;
+    }
+    curr->next=new_node;
+  }
+
+   // Copy contents of new_data to newly allocated memory.
+   // Assumption: char takes 1 byte.
+   // int i;
+   // for (i=0; i<data_size; i++)
+   //     *(char *)(new_node->data + i) = *(char *)(new_data + i);
+   //
+   // // Change head pointer as new node is added at the beginning
+   // (*head_ref)    = new_node;
+
 }
 
 // add thread to the end of th thread list
-void addThread (containerObj *first, char *new_tid) {
-    threadObj *newest = doMalloc (sizeof (*newest));
-    newest->tid = *new_tid;
-    newest->next = first->firsthreadObj;  
-    first->firsthreadObj = newest;
+void addThread (struct thread **first, int new_tid) {
+    struct thread *newNode = doMalloc(sizeof (*newNode));
+    newNode->tid = new_tid;
+    newNode->next = NULL;
+    if(*first == NULL)
+      {
+          **first=*newNode;
+          return;
+      }
+   else {
+     struct thread *curr=*first;
+     while(curr->next!=NULL)
+     {
+       curr=curr->next;
+     }
+     curr->next=newNode;
+   }
+
+
+
+    // if(*curr == NULL)
+    // {
+    //   first
+    // }
+    // first->firsthreadObj = newest;
 }
 
 
@@ -109,7 +153,8 @@ int processor_container_delete(struct processor_container_cmd __user *user_cmd)
  */
 int processor_container_create(struct processor_container_cmd __user *user_cmd)
 {
-  printk("create\n");
+  // printk("create\n");
+  
   // printk("user cmd:\t %llu\t%llu", user_cmd->cid, user_cmd->op);
   // create a new container
     return 0;
