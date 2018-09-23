@@ -45,14 +45,57 @@
 #include <linux/sched.h>
 #include <linux/kthread.h>
 
+// structure for container list
+typedef struct container {
+    int cid;
+    threadObj *firsthreadObj;
+    struct container *next;
+} containerObj;
+
+// structure for thread list
+typedef struct thread {
+    int tid;
+    struct thread *next;
+} threadObj;
+
+// memory allocation
+void *doMalloc (size_t sz) {
+    void *mem = kmalloc(sz, GFP_KERNEL);
+    if (mem == NULL) {
+        printk ("Out of memory! Exiting.\n");
+        return NULL;
+    }
+    return mem;
+}
+
+// add container to the start of the container list
+void addContainer (containerObj **first, char *new_cid) {
+
+    containerObj *newest = doMalloc (sizeof (*newest));
+    newest->cid = *new_cid;
+    newest->next = *first;
+    *first = newest;
+}
+
+// add thread to the end of th thread list
+void addThread (containerObj *first, char *new_tid) {
+    threadObj *newest = doMalloc (sizeof (*newest));
+    newest->tid = *new_tid;
+    newest->next = first->firsthreadObj;  
+    first->firsthreadObj = newest;
+}
+
+
 /**
  * Delete the task in the container.
- * 
+ *
  * external functions needed:
- * mutex_lock(), mutex_unlock(), wake_up_process(), 
+ * mutex_lock(), mutex_unlock(), wake_up_process(),
  */
 int processor_container_delete(struct processor_container_cmd __user *user_cmd)
 {
+    printk("delete\n");
+    // printk("user cmd:\t %llu\t%llu", user_cmd->cid, user_cmd->op);
     return 0;
 }
 
@@ -60,23 +103,27 @@ int processor_container_delete(struct processor_container_cmd __user *user_cmd)
  * Create a task in the corresponding container.
  * external functions needed:
  * copy_from_user(), mutex_lock(), mutex_unlock(), set_current_state(), schedule()
- * 
+ *
  * external variables needed:
- * struct task_struct* current  
+ * struct task_struct* current
  */
 int processor_container_create(struct processor_container_cmd __user *user_cmd)
 {
+  printk("create\n");
+  // printk("user cmd:\t %llu\t%llu", user_cmd->cid, user_cmd->op);
+  // create a new container
     return 0;
 }
 
 /**
  * switch to the next task within the same container
- * 
+ *
  * external functions needed:
  * mutex_lock(), mutex_unlock(), wake_up_process(), set_current_state(), schedule()
  */
 int processor_container_switch(struct processor_container_cmd __user *user_cmd)
 {
+    printk("switch thread\n");
     return 0;
 }
 
@@ -87,6 +134,7 @@ int processor_container_switch(struct processor_container_cmd __user *user_cmd)
 int processor_container_ioctl(struct file *filp, unsigned int cmd,
                               unsigned long arg)
 {
+    printk("in ioctl\n");
     switch (cmd)
     {
     case PCONTAINER_IOCTL_CSWITCH:

@@ -51,6 +51,7 @@ extern struct miscdevice processor_container_dev;
  */
 int processor_container_init(void)
 {
+    printk("Hola Mundo\n");
     int ret;
     if ((ret = misc_register(&processor_container_dev)))
         printk(KERN_ERR "Unable to register \"processor_container\" misc device\n");
@@ -62,8 +63,9 @@ int processor_container_init(void)
 
 /**
  * Cleanup and deregister the kernel module
- */ 
+ */
 void processor_container_exit(void)
 {
+    printk("Adios Mundo\n");
     misc_deregister(&processor_container_dev);
 }
