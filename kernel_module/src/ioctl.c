@@ -138,8 +138,8 @@ void addThread (struct thread **first, int new_tid) {
  */
 int processor_container_delete(struct processor_container_cmd __user *user_cmd)
 {
-    printk("delete\n");
-    // printk("user cmd:\t %llu\t%llu", user_cmd->cid, user_cmd->op);
+    struct task_struct *task=current;
+    printk("Thread id in delete  : ",(int)task->pid);
     return 0;
 }
 
@@ -153,10 +153,9 @@ int processor_container_delete(struct processor_container_cmd __user *user_cmd)
  */
 int processor_container_create(struct processor_container_cmd __user *user_cmd)
 {
-  // printk("create\n");
-  
-  // printk("user cmd:\t %llu\t%llu", user_cmd->cid, user_cmd->op);
-  // create a new container
+     struct processor_container_cmd userInfo;
+     copy_from_user(&userInfo,user_cmd,sizeof(userInfo));
+     printk("Container Id %d",(int)userInfo.cid);
     return 0;
 }
 
