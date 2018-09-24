@@ -66,15 +66,14 @@ struct container *containerList;
 void *doMalloc (size_t sz) {
     void *mem = kmalloc(sz, GFP_KERNEL);
     if (mem == NULL) {
-        printk ("Out of memory! Exiting.\n");
+        printk ("No memory to allocate\n");
         return NULL;
     }
     return mem;
 }
 
 // add container to the end of the container list
-void addContainer (struct container *head, int new_cid) {
-
+struct container *addContainer (struct container *head, int new_cid) {
    struct container *new_node = doMalloc(sizeof (new_node));
    new_node->cid  = new_cid;
    new_node->headThread = NULL;
@@ -82,37 +81,27 @@ void addContainer (struct container *head, int new_cid) {
    if(head == NULL)
      {
          head=new_node;
-         return;
      }
   else {
-    struct thread *curr=head;
+    struct container *curr = head;
     while(curr->next!=NULL)
     {
-      curr=curr->next;
+      curr = curr->next;
     }
     curr->next=new_node;
   }
-
-   // Copy contents of new_data to newly allocated memory.
-   // Assumption: char takes 1 byte.
-   // int i;
-   // for (i=0; i<data_size; i++)
-   //     *(char *)(new_node->data + i) = *(char *)(new_data + i);
-   //
-   // // Change head pointer as new node is added at the beginning
-   // (*head_ref)    = new_node;
-
+  return head;
 }
 
 // add thread to the end of th thread list
-void addThread (struct thread *first, int new_tid) {
+struct thread *addThread (struct thread *first, int new_tid) {
     struct thread *newNode = doMalloc(sizeof (*newNode));
     newNode->tid = new_tid;
     newNode->next = NULL;
     if(first == NULL)
       {
           first=newNode;
-          return;
+          return first;
       }
    else {
      struct thread *curr=first;
@@ -122,29 +111,60 @@ void addThread (struct thread *first, int new_tid) {
      }
      curr->next=newNode;
    }
-
-// check if container exists
-struct container * getContainer(struct container *head, int new_cid)
-{
-  if(head == NULL)
-    {
-        return NULL;
-    }
-  return head;
-  struct thread *curr=*first;
-  while(curr!=NULL)
-  {
-    if(curr->cid == cid)
-    curr=curr->next;
-  }
-  curr->next=newNode;
+   return first;
 }
 
-    // if(*curr == NULL)
-    // {
-    //   first
-    // }
-    // first->firsthreadObj = newest;
+// check if container exists or add it if it does not
+struct container *addToContainer(struct container *head, int new_cid, int new_tid)
+{
+  struct container * curr_container;
+  struct container *curr=head;
+  if(head == NULL)
+    {
+        curr_container = addContainer(head, new_cid);
+        curr_container->headThread = addThread(curr_container->headThread, new_tid);
+        return curr_container;
+
+    }
+  while(curr!=NULL)
+  {
+    if(curr->cid == new_cid)
+    {
+      curr_container->headThread = addThread(curr->headThread, new_tid);
+      return curr;
+    }
+    curr=curr->next;
+  }
+  curr_container = addContainer(head, new_cid);
+  curr_container->headThread = addThread(curr_container->headThread, new_tid);
+  return curr_container;
+}
+
+// print the map
+void printMap(struct container *head)
+{
+  if(head == NULL)
+  {
+    printk("\nNo containers\n");
+    return;
+  }
+  else
+  {
+    struct thread *currThread;
+    struct container *currContainer = head;
+    while(currContainer != NULL)
+    {
+      printk("\nCID:\t%d\t",currContainer->cid);
+      currThread = currContainer->headThread;
+      while(currThread != NULL)
+      {
+        printk("TID:\t%d\t",currThread->tid);
+        currThread = currThread->next;
+      }
+      printk("\n");
+      currContainer = currContainer->next;
+    }
+  }
 }
 
 
@@ -156,8 +176,8 @@ struct container * getContainer(struct container *head, int new_cid)
  */
 int processor_container_delete(struct processor_container_cmd __user *user_cmd)
 {
-    struct task_struct *task=current;
-    printk("Thread id in delete  : ",(int)task->pid);
+    // struct task_struct *task=current;
+    // printk("Thread id in delete  : ",(int)task->pid);
     return 0;
 }
 
@@ -171,14 +191,16 @@ int processor_container_delete(struct processor_container_cmd __user *user_cmd)
  */
 int processor_container_create(struct processor_container_cmd __user *user_cmd)
 {
+     int new_cid;
+     int new_tid;
      struct processor_container_cmd userInfo;
-     copy_from_user(&userInfo,user_cmd,sizeof(userInfo));
-     int new_cid = (int)userInfo.cid;
      struct task_struct *task=current;
-     int new_tid = (int)task->pid;
-
-
-
+     copy_from_user(&userInfo,user_cmd,sizeof(userInfo));
+     new_cid = (int)userInfo.cid;
+     new_tid = (int)task->pid;
+     // printk("CID: %d\tTIP: %d\n",new_cid,new_tid);
+     containerList = addToContainer(containerList, new_cid, new_tid);
+     printMap(containerList);
      return 0;
 }
 
@@ -190,7 +212,7 @@ int processor_container_create(struct processor_container_cmd __user *user_cmd)
  */
 int processor_container_switch(struct processor_container_cmd __user *user_cmd)
 {
-    printk("switch thread\n");
+    // printk("switch thread\n");
     return 0;
 }
 
@@ -201,7 +223,7 @@ int processor_container_switch(struct processor_container_cmd __user *user_cmd)
 int processor_container_ioctl(struct file *filp, unsigned int cmd,
                               unsigned long arg)
 {
-    printk("in ioctl\n");
+    // printk("in ioctl\n");
     switch (cmd)
     {
     case PCONTAINER_IOCTL_CSWITCH:
