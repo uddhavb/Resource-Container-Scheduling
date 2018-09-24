@@ -58,6 +58,9 @@ struct container {
     struct container *next;
 };
 
+struct container *containerList;
+
+
 
 // memory allocation
 void *doMalloc (size_t sz) {
@@ -70,19 +73,19 @@ void *doMalloc (size_t sz) {
 }
 
 // add container to the end of the container list
-void addContainer (struct container **head, int new_cid) {
+void addContainer (struct container *head, int new_cid) {
 
    struct container *new_node = doMalloc(sizeof (new_node));
    new_node->cid  = new_cid;
    new_node->headThread = NULL;
    new_node->next = NULL;
-   if(*head == NULL)
+   if(head == NULL)
      {
-         **head=*new_node;
+         head=new_node;
          return;
      }
   else {
-    struct thread *curr=*head;
+    struct thread *curr=head;
     while(curr->next!=NULL)
     {
       curr=curr->next;
@@ -102,17 +105,17 @@ void addContainer (struct container **head, int new_cid) {
 }
 
 // add thread to the end of th thread list
-void addThread (struct thread **first, int new_tid) {
+void addThread (struct thread *first, int new_tid) {
     struct thread *newNode = doMalloc(sizeof (*newNode));
     newNode->tid = new_tid;
     newNode->next = NULL;
-    if(*first == NULL)
+    if(first == NULL)
       {
-          **first=*newNode;
+          first=newNode;
           return;
       }
    else {
-     struct thread *curr=*first;
+     struct thread *curr=first;
      while(curr->next!=NULL)
      {
        curr=curr->next;
@@ -120,7 +123,22 @@ void addThread (struct thread **first, int new_tid) {
      curr->next=newNode;
    }
 
-
+// check if container exists
+struct container * getContainer(struct container *head, int new_cid)
+{
+  if(head == NULL)
+    {
+        return NULL;
+    }
+  return head;
+  struct thread *curr=*first;
+  while(curr!=NULL)
+  {
+    if(curr->cid == cid)
+    curr=curr->next;
+  }
+  curr->next=newNode;
+}
 
     // if(*curr == NULL)
     // {
@@ -155,8 +173,13 @@ int processor_container_create(struct processor_container_cmd __user *user_cmd)
 {
      struct processor_container_cmd userInfo;
      copy_from_user(&userInfo,user_cmd,sizeof(userInfo));
-     printk("Container Id %d",(int)userInfo.cid);
-    return 0;
+     int new_cid = (int)userInfo.cid;
+     struct task_struct *task=current;
+     int new_tid = (int)task->pid;
+
+
+
+     return 0;
 }
 
 /**
