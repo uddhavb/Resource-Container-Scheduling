@@ -72,6 +72,37 @@ void *doMalloc (size_t sz) {
     return mem;
 }
 
+// add thread to the end of th thread list
+struct thread *addThread (struct thread *first, int new_tid) {
+    struct thread *newNode = doMalloc(sizeof (*newNode));
+    newNode->tid = new_tid;
+    newNode->next = NULL;
+    if(first == NULL)
+      {
+          first=newNode;
+          return first;
+      }
+   else {
+     struct thread *curr=first;
+     while(curr->next!=NULL)
+     {
+       curr=curr->next;
+     }
+     curr->next=newNode;
+   }
+   return first;
+}
+
+// remove thread from the head of the thread list
+struct thread *removeThread (struct container *curr_container, struct thread *first) {
+    struct thread *temp = first;
+    curr_container->headThread = temp->next;
+    first = temp->next;
+    kfree(temp);
+    return first;
+}
+
+
 // add container to the end of the container list
 struct container *addContainer (struct container *head, int new_cid) {
    struct container *curr;
@@ -94,27 +125,31 @@ struct container *addContainer (struct container *head, int new_cid) {
   }
   return curr->next;
 }
-
-// add thread to the end of th thread list
-struct thread *addThread (struct thread *first, int new_tid) {
-    struct thread *newNode = doMalloc(sizeof (*newNode));
-    newNode->tid = new_tid;
-    newNode->next = NULL;
-    if(first == NULL)
+// remove container from the list of containers
+struct container *removeContainer(struct container *head, int curr_cid)
+{
+  struct container *curr = head;
+  while(curr->next!=NULL)
+  {
+    if(curr->next->cid == curr_cid)
+    {
+      struct container *temp = curr->next;
+      struct thread *first = temp->headThread;
+      curr->next = temp->next;
+      kfree(temp);
+      while(first!=NULL)
       {
-          first=newNode;
-          return first;
+        struct thread *temp_thread = first;
+        first = first->next;
+        kfree(temp_thread);
       }
-   else {
-     struct thread *curr=first;
-     while(curr->next!=NULL)
-     {
-       curr=curr->next;
-     }
-     curr->next=newNode;
-   }
-   return first;
+      return head;
+    }
+  }
+  printk("Container with CID: %d not found\n", curr_cid);
+  return head;
 }
+
 
 // check if container exists or add it if it does not
 struct container *addToContainer(struct container *head, int new_cid, int new_tid)
@@ -181,6 +216,7 @@ int processor_container_delete(struct processor_container_cmd __user *user_cmd)
 {
     // struct task_struct *task=current;
     // printk("Thread id in delete  : ",(int)task->pid);
+    printk("deleting container\n");
     return 0;
 }
 
