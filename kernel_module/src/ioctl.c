@@ -74,6 +74,7 @@ void *doMalloc (size_t sz) {
 
 // add container to the end of the container list
 struct container *addContainer (struct container *head, int new_cid) {
+   struct container *curr;
    struct container *new_node = doMalloc(sizeof (new_node));
    new_node->cid  = new_cid;
    new_node->headThread = NULL;
@@ -81,16 +82,17 @@ struct container *addContainer (struct container *head, int new_cid) {
    if(head == NULL)
      {
          head=new_node;
+         return head;
      }
   else {
-    struct container *curr = head;
+    curr = head;
     while(curr->next!=NULL)
     {
       curr = curr->next;
     }
     curr->next=new_node;
   }
-  return head;
+  return curr->next;
 }
 
 // add thread to the end of th thread list
@@ -121,9 +123,10 @@ struct container *addToContainer(struct container *head, int new_cid, int new_ti
   struct container *curr=head;
   if(head == NULL)
     {
-        curr_container = addContainer(head, new_cid);
+        head = addContainer(head, new_cid);
+        curr_container = head;
         curr_container->headThread = addThread(curr_container->headThread, new_tid);
-        return curr_container;
+        return head;
 
     }
   while(curr!=NULL)
@@ -131,13 +134,13 @@ struct container *addToContainer(struct container *head, int new_cid, int new_ti
     if(curr->cid == new_cid)
     {
       curr_container->headThread = addThread(curr->headThread, new_tid);
-      return curr;
+      return head;
     }
     curr=curr->next;
   }
   curr_container = addContainer(head, new_cid);
   curr_container->headThread = addThread(curr_container->headThread, new_tid);
-  return curr_container;
+  return head;
 }
 
 // print the map
