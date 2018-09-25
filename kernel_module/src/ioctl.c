@@ -93,6 +93,46 @@ struct thread *addThread (struct thread *first, int new_tid) {
    return first;
 }
 
+// remove current thread and add it to the end of queue
+struct thread *addCurrentThreadAtEnd (struct container *head,int cid) {
+
+    struct container *currContainer=head;
+    struct thread *first=NULL;
+    //find the container for cid
+    while(currContainer!=NULL)
+    {
+       if(currContainer->cid==cid)
+       {
+         first=currContainer->headThread;
+         break;
+       }
+       else currContainer=currContainer->next;
+    }
+
+    //first is the head to thread list
+    if(first == NULL || first->next==NULL)
+      {
+          printk("Nothing to do \n");
+          return first;
+      }
+   else {
+
+     struct thread *newFirst=first->next;
+     struct thread *curr=first;
+     while(curr->next!=NULL)
+     {
+       curr=curr->next;
+     }
+     curr->next=first;
+     first->next=NULL;
+
+     //tempHead is a pointer to current container
+     currContainer->headThread=newFirst;
+     return newFirst;
+   }
+
+}
+
 // remove thread from the head of the thread list
 struct thread *removeTopThread (struct container *curr_container, struct thread *first) {
     struct thread *temp = first;
@@ -168,6 +208,33 @@ struct container *removeContainer(struct container *head, int curr_cid)
   return head;
 }
 
+//check if the container has empty thread containerList
+bool isThreadListInContainerEmpty(struct container *head,int cid)
+{
+    if(head==NULL)
+      {
+        printk("returned when Container head is null\n");
+        return true;
+      }
+    struct container *curr=head;
+    while(curr!=NULL)
+    {
+       if(curr->cid==cid)
+       {
+         if(curr->headThread==NULL)
+            {
+                printk("returned when thread head is null\n");
+                return true;
+            }
+            printk("returned when thread head has some thread\n");
+         return false;
+       }
+       curr=curr->next;
+    }
+
+    printk("returned when NOthing is found\n");
+    return true;
+}
 
 // check if container exists or add it if it does not
 struct container *addToContainer(struct container *head, int new_cid, int new_tid)
@@ -201,7 +268,7 @@ void printMap(struct container *head)
 {
   if(head == NULL)
   {
-    printk("\nNo containers\n");
+    printk("No containers\n");
     return;
   }
   else
@@ -261,9 +328,16 @@ int processor_container_create(struct processor_container_cmd __user *user_cmd)
      copy_from_user(&userInfo,user_cmd,sizeof(userInfo));
      new_cid = (int)userInfo.cid;
      new_tid = (int)task->pid;
-     // printk("CID: %d\tTIP: %d\n",new_cid,new_tid);
-     containerList = addToContainer(containerList, new_cid, new_tid);
-     printMap(containerList);
+     //printk("CID: %d\tTIP: %d\n",new_cid,new_tid);
+     //printk("cid %d   ThreadList : % d",new_cid,);
+     if(isThreadListInContainerEmpty(containerList,new_cid)==1)
+        containerList = addToContainer(containerList, new_cid, new_tid);
+     else
+     {
+       //make the thread to sleep and add it to queue
+
+     }
+     //printMap(containerList);
      return 0;
 }
 
@@ -275,7 +349,11 @@ int processor_container_create(struct processor_container_cmd __user *user_cmd)
  */
 int processor_container_switch(struct processor_container_cmd __user *user_cmd)
 {
-    // printk("switch thread\n");
+
+    //addCurrentThreadAtEnd(containerList,1);
+    //printMap(containerList);
+
+    //printk("switch thread\n");
     return 0;
 }
 
