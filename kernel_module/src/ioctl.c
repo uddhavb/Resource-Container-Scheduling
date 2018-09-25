@@ -94,7 +94,7 @@ struct thread *addThread (struct thread *first, int new_tid) {
 }
 
 // remove thread from the head of the thread list
-struct thread *removeThread (struct container *curr_container, struct thread *first) {
+struct thread *removeTopThread (struct container *curr_container, struct thread *first) {
     struct thread *temp = first;
     curr_container->headThread = temp->next;
     first = temp->next;
@@ -102,6 +102,23 @@ struct thread *removeThread (struct container *curr_container, struct thread *fi
     return first;
 }
 
+// remove specified thread
+struct thread *removeThread(struct thread *first, int curr_tid)
+{
+  struct thread *temp;
+  struct thread *curr_thread = first;
+  while(curr_thread->next != NULL)
+  {
+    if(curr_thread->next->tid = curr_tid)
+    {
+      temp = curr_thread->next;
+      curr_thread->next = temp->next;
+      return first;
+    }
+  }
+  printk("The thread TID: %d does not exist\n", curr_tid);
+  return first;
+}
 
 // add container to the end of the container list
 struct container *addContainer (struct container *head, int new_cid) {
@@ -125,6 +142,7 @@ struct container *addContainer (struct container *head, int new_cid) {
   }
   return curr->next;
 }
+
 // remove container from the list of containers
 struct container *removeContainer(struct container *head, int curr_cid)
 {
@@ -214,9 +232,15 @@ void printMap(struct container *head)
  */
 int processor_container_delete(struct processor_container_cmd __user *user_cmd)
 {
-    // struct task_struct *task=current;
-    // printk("Thread id in delete  : ",(int)task->pid);
-    printk("deleting container\n");
+    int curr_cid;
+    int curr_tid;
+    struct processor_container_cmd userInfo;
+    struct task_struct *task=current;
+    copy_from_user(&userInfo,user_cmd,sizeof(userInfo));
+    curr_cid = (int)userInfo.cid;
+    curr_tid = (int)task->pid;
+    printk("deleting container CID:\t%d\n", curr_cid);
+    containerList = removeContainer(containerList,curr_cid);
     return 0;
 }
 
