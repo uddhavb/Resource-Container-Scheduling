@@ -45,12 +45,14 @@
 #include <linux/sched.h>
 #include <linux/kthread.h>
 
+// // mutex
+static DEFINE_MUTEX(lock);
 // structure for thread list
 struct thread {
     int tid;
+    struct task_struct *current_thread;
     struct thread *next;
 };
-
 // structure for container list
 struct container {
     int cid;
@@ -59,8 +61,6 @@ struct container {
 };
 
 struct container *containerList;
-
-
 
 // memory allocation
 void *doMalloc (size_t sz) {
@@ -72,104 +72,88 @@ void *doMalloc (size_t sz) {
     return mem;
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
 // add thread to the end of th thread list
 struct thread *addThread (struct thread *first, int new_tid) {
+    struct thread *curr;
     struct thread *newNode = doMalloc(sizeof (*newNode));
+    mutex_lock(&lock);
+    newNode->current_thread = current;
     newNode->tid = new_tid;
     newNode->next = NULL;
     if(first == NULL)
       {
           first=newNode;
+          mutex_unlock(&lock);
           return first;
       }
    else {
-     struct thread *curr=first;
+     curr=first;
      while(curr->next!=NULL)
      {
+       if(curr->tid == new_tid)
+       {
+         printk("Thread already exists in container\n");
+         kfree(newNode);
+         mutex_unlock(&lock);
+         return first;
+       }
        curr=curr->next;
      }
      curr->next=newNode;
    }
+   mutex_unlock(&lock);
+   // sleep
+   set_current_state(TASK_INTERRUPTIBLE);
+   schedule();
    return first;
 }
 
-// remove current thread and add it to the end of queue
-struct thread *addCurrentThreadAtEnd (struct container *head,int cid) {
-
-    struct container *currContainer=head;
-    struct thread *first=NULL;
-    //find the container for cid
-    while(currContainer!=NULL)
+// remove thread from given container
+struct container *removeTopThread (struct container *head, int curr_cid) {
+    struct container *curr = head;
+    struct container *prev = NULL;
+    mutex_lock(&lock);
+    while(curr!=NULL)
     {
-       if(currContainer->cid==cid)
-       {
-         first=currContainer->headThread;
-         break;
-       }
-       else currContainer=currContainer->next;
-    }
-
-    //first is the head to thread list
-    if(first == NULL || first->next==NULL)
+      if(curr->cid == curr_cid)
       {
-          printk("Nothing to do \n");
-          return first;
+        struct thread *first = curr->headThread;
+        if(first->next == NULL)
+        {
+          kfree(first);
+          if(prev == NULL) prev = curr->next;
+          else prev->next = curr->next;
+          kfree(curr);
+          mutex_unlock(&lock);
+          return prev;
+        }
+        curr->headThread = first->next;
+        wake_up_process(first->next->current_thread);
+        kfree(first);
+        mutex_unlock(&lock);
+        return head;
       }
-   else {
-
-     struct thread *newFirst=first->next;
-     struct thread *curr=first;
-     while(curr->next!=NULL)
-     {
-       curr=curr->next;
-     }
-     curr->next=first;
-     first->next=NULL;
-
-     //tempHead is a pointer to current container
-     currContainer->headThread=newFirst;
-     return newFirst;
-   }
-
-}
-
-// remove thread from the head of the thread list
-struct thread *removeTopThread (struct container *curr_container, struct thread *first) {
-    struct thread *temp = first;
-    curr_container->headThread = temp->next;
-    first = temp->next;
-    kfree(temp);
-    return first;
-}
-
-// remove specified thread
-struct thread *removeThread(struct thread *first, int curr_tid)
-{
-  struct thread *temp;
-  struct thread *curr_thread = first;
-  while(curr_thread->next != NULL)
-  {
-    if(curr_thread->next->tid = curr_tid)
-    {
-      temp = curr_thread->next;
-      curr_thread->next = temp->next;
-      return first;
+      prev = curr;
+      curr = curr->next;
     }
-  }
-  printk("The thread TID: %d does not exist\n", curr_tid);
-  return first;
+    printk("Container with CID: %d not found\n", curr_cid);
+    mutex_unlock(&lock);
+    return head;
 }
 
 // add container to the end of the container list
 struct container *addContainer (struct container *head, int new_cid) {
    struct container *curr;
    struct container *new_node = doMalloc(sizeof (new_node));
+   mutex_lock(&lock);
    new_node->cid  = new_cid;
    new_node->headThread = NULL;
    new_node->next = NULL;
    if(head == NULL)
      {
          head=new_node;
+         mutex_unlock(&lock);
          return head;
      }
   else {
@@ -180,67 +164,17 @@ struct container *addContainer (struct container *head, int new_cid) {
     }
     curr->next=new_node;
   }
+  mutex_unlock(&lock);
   return curr->next;
 }
 
-// remove container from the list of containers
-struct container *removeContainer(struct container *head, int curr_cid)
-{
-  struct container *curr = head;
-  while(curr->next!=NULL)
-  {
-    if(curr->next->cid == curr_cid)
-    {
-      struct container *temp = curr->next;
-      struct thread *first = temp->headThread;
-      curr->next = temp->next;
-      kfree(temp);
-      while(first!=NULL)
-      {
-        struct thread *temp_thread = first;
-        first = first->next;
-        kfree(temp_thread);
-      }
-      return head;
-    }
-  }
-  printk("Container with CID: %d not found\n", curr_cid);
-  return head;
-}
-
-//check if the container has empty thread containerList
-bool isThreadListInContainerEmpty(struct container *head,int cid)
-{
-    if(head==NULL)
-      {
-        printk("returned when Container head is null\n");
-        return true;
-      }
-    struct container *curr=head;
-    while(curr!=NULL)
-    {
-       if(curr->cid==cid)
-       {
-         if(curr->headThread==NULL)
-            {
-                printk("returned when thread head is null\n");
-                return true;
-            }
-            printk("returned when thread head has some thread\n");
-         return false;
-       }
-       curr=curr->next;
-    }
-
-    printk("returned when NOthing is found\n");
-    return true;
-}
 
 // check if container exists or add it if it does not
 struct container *addToContainer(struct container *head, int new_cid, int new_tid)
 {
   struct container * curr_container;
   struct container *curr=head;
+  printk("Add to container:\tCID: %d\tTID: %d\n",new_cid,new_tid);
   if(head == NULL)
     {
         head = addContainer(head, new_cid);
@@ -266,9 +200,12 @@ struct container *addToContainer(struct container *head, int new_cid, int new_ti
 // print the map
 void printMap(struct container *head)
 {
+  printk("\n\n");
+  mutex_lock(&lock);
   if(head == NULL)
   {
-    printk("No containers\n");
+    printk("\nNo containers\n");
+    mutex_unlock(&lock);
     return;
   }
   else
@@ -288,8 +225,78 @@ void printMap(struct container *head)
       currContainer = currContainer->next;
     }
   }
+  mutex_unlock(&lock);
+  printk("\n\n");
 }
 
+// remove current thread and add it to the end of queue
+struct container *addCurrentThreadAtEnd (struct container *head,int cid) {
+    struct container *currContainer=head;
+    struct thread *first=NULL;
+    mutex_lock(&lock);
+    printk("add current thread at end:\tCID: %d\n",cid);
+    //find the container for cid
+    while(currContainer!=NULL)
+    {
+       if(currContainer->cid==cid)
+       {
+         first=currContainer->headThread;
+         break;
+       }
+       currContainer=currContainer->next;
+    }
+
+    //first is the head to thread list
+    if(first == NULL || first->next==NULL)
+      {
+          printk("Nothing to do \n");
+          mutex_unlock(&lock);
+          return head;
+      }
+   else {
+
+     struct thread *newFirst=first->next;
+     struct thread *curr=first;
+     while(curr->next!=NULL)
+     {
+       curr=curr->next;
+     }
+     curr->next=first;
+     first->next=NULL;
+
+     //tempHead is a pointer to current container
+     currContainer->headThread=newFirst;
+     wake_up_process(newFirst->current_thread);
+     mutex_unlock(&lock);
+     set_current_state(TASK_INTERRUPTIBLE);
+     schedule();
+     printk("\nstopping curr thread and starting next one\n");
+     return head;
+   }
+
+
+}
+
+int findContainerForThread(struct container *head, int curr_tid)
+{
+  struct container *curr_container = head;
+  mutex_lock(&lock);
+  printk("find container for thread:\tTID: %d\n",curr_tid);
+  while(curr_container != NULL)
+  {
+    if(curr_container->headThread!=NULL)
+    {
+      if(curr_container->headThread->tid == curr_tid)
+      {
+        mutex_unlock(&lock);
+        return curr_container->cid;
+      }
+    }
+    curr_container = curr_container->next;
+  }
+  mutex_unlock(&lock);
+  return -1;
+}
 
 /**
  * Delete the task in the container.
@@ -300,14 +307,12 @@ void printMap(struct container *head)
 int processor_container_delete(struct processor_container_cmd __user *user_cmd)
 {
     int curr_cid;
-    int curr_tid;
     struct processor_container_cmd userInfo;
-    struct task_struct *task=current;
     copy_from_user(&userInfo,user_cmd,sizeof(userInfo));
     curr_cid = (int)userInfo.cid;
-    curr_tid = (int)task->pid;
     printk("deleting container CID:\t%d\n", curr_cid);
-    containerList = removeContainer(containerList,curr_cid);
+    containerList = removeTopThread(containerList,curr_cid);
+    printMap(containerList);
     return 0;
 }
 
@@ -328,16 +333,9 @@ int processor_container_create(struct processor_container_cmd __user *user_cmd)
      copy_from_user(&userInfo,user_cmd,sizeof(userInfo));
      new_cid = (int)userInfo.cid;
      new_tid = (int)task->pid;
-     //printk("CID: %d\tTIP: %d\n",new_cid,new_tid);
-     //printk("cid %d   ThreadList : % d",new_cid,);
-     if(isThreadListInContainerEmpty(containerList,new_cid)==1)
-        containerList = addToContainer(containerList, new_cid, new_tid);
-     else
-     {
-       //make the thread to sleep and add it to queue
-
-     }
-     //printMap(containerList);
+     printk("creating CID: %d\tTIP: %d\n",new_cid,new_tid);
+     containerList = addToContainer(containerList, new_cid, new_tid);
+     printMap(containerList);
      return 0;
 }
 
@@ -349,13 +347,18 @@ int processor_container_create(struct processor_container_cmd __user *user_cmd)
  */
 int processor_container_switch(struct processor_container_cmd __user *user_cmd)
 {
-
-    //addCurrentThreadAtEnd(containerList,1);
-    //printMap(containerList);
-
-    //printk("switch thread\n");
+    int curr_cid;
+    int curr_tid;
+    struct task_struct *task=current;
+    curr_tid = (int)task->pid;
+      curr_cid = findContainerForThread(containerList, curr_tid);
+     if(curr_cid!=-1)
+        containerList = addCurrentThreadAtEnd(containerList, curr_cid);
+     else printk("\ncontainer not found for swapping\n");
+     printMap(containerList);
     return 0;
 }
+
 
 /**
  * control function that receive the command in user space and pass arguments to
