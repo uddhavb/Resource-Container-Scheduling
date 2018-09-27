@@ -75,15 +75,17 @@ void *doMalloc (size_t sz) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // add thread to the end of th thread list
 struct thread *addThread (struct thread *first, int new_tid) {
-    struct thread *curr;
-    struct thread *newNode = doMalloc(sizeof (*newNode));
+    struct thread *curr=NULL;
+    struct thread *newNode = NULL;
     mutex_lock(&lock);
+    newNode = doMalloc(sizeof (*newNode));
     newNode->current_thread = current;
     newNode->tid = new_tid;
     newNode->next = NULL;
     if(first == NULL)
       {
           first=newNode;
+          newNode=NULL;
           mutex_unlock(&lock);
           return first;
       }
@@ -95,6 +97,7 @@ struct thread *addThread (struct thread *first, int new_tid) {
        {
          printk("Thread already exists in container\n");
          kfree(newNode);
+         newNode = NULL;
          mutex_unlock(&lock);
          return first;
        }
@@ -102,6 +105,7 @@ struct thread *addThread (struct thread *first, int new_tid) {
      }
      curr->next=newNode;
    }
+   newNode=NULL;
    mutex_unlock(&lock);
    // sleep
    set_current_state(TASK_INTERRUPTIBLE);
@@ -111,9 +115,10 @@ struct thread *addThread (struct thread *first, int new_tid) {
 
 // remove thread from given container
 struct container *removeTopThread (struct container *head, int curr_cid) {
-    struct container *curr = head;
+    struct container *curr = NULL;
     struct container *prev = NULL;
     mutex_lock(&lock);
+    curr = head;
     while(curr!=NULL)
     {
       if(curr->cid == curr_cid)
@@ -122,15 +127,18 @@ struct container *removeTopThread (struct container *head, int curr_cid) {
         if(first->next == NULL)
         {
           kfree(first);
+          first=NULL;
           if(prev == NULL) prev = curr->next;
           else prev->next = curr->next;
           kfree(curr);
+          curr=NULL;
           mutex_unlock(&lock);
           return prev;
         }
         curr->headThread = first->next;
         wake_up_process(first->next->current_thread);
         kfree(first);
+        first=NULL;
         mutex_unlock(&lock);
         return head;
       }
@@ -144,15 +152,17 @@ struct container *removeTopThread (struct container *head, int curr_cid) {
 
 // add container to the end of the container list
 struct container *addContainer (struct container *head, int new_cid) {
-   struct container *curr;
-   struct container *new_node = doMalloc(sizeof (new_node));
+   struct container *curr=NULL;
+   struct container *new_node = NULL;
    mutex_lock(&lock);
+   new_node = doMalloc(sizeof (new_node));
    new_node->cid  = new_cid;
    new_node->headThread = NULL;
    new_node->next = NULL;
    if(head == NULL)
      {
          head=new_node;
+         new_node=NULL;
          mutex_unlock(&lock);
          return head;
      }
@@ -164,6 +174,7 @@ struct container *addContainer (struct container *head, int new_cid) {
     }
     curr->next=new_node;
   }
+  new_node=NULL;
   mutex_unlock(&lock);
   return curr->next;
 }
@@ -231,9 +242,10 @@ void printMap(struct container *head)
 
 // remove current thread and add it to the end of queue
 struct container *addCurrentThreadAtEnd (struct container *head,int cid) {
-    struct container *currContainer=head;
+    struct container *currContainer=NULL;
     struct thread *first=NULL;
     mutex_lock(&lock);
+    currContainer=head;
     printk("add current thread at end:\tCID: %d\n",cid);
     //find the container for cid
     while(currContainer!=NULL)
@@ -273,14 +285,13 @@ struct container *addCurrentThreadAtEnd (struct container *head,int cid) {
      printk("\nstopping curr thread and starting next one\n");
      return head;
    }
-
-
 }
 
 int findContainerForThread(struct container *head, int curr_tid)
 {
-  struct container *curr_container = head;
+  struct container *curr_container=NULL;
   mutex_lock(&lock);
+  curr_container = head;
   printk("find container for thread:\tTID: %d\n",curr_tid);
   while(curr_container != NULL)
   {
@@ -347,8 +358,8 @@ int processor_container_create(struct processor_container_cmd __user *user_cmd)
  */
 int processor_container_switch(struct processor_container_cmd __user *user_cmd)
 {
-    int curr_cid;
-    int curr_tid;
+    int curr_cid=NULL;
+    int curr_tid=NULL;
     struct task_struct *task=current;
     curr_tid = (int)task->pid;
       curr_cid = findContainerForThread(containerList, curr_tid);
