@@ -76,14 +76,13 @@ struct container *containerList =  NULL;
 // add thread to the end of th thread list
 void addThread (int curr_cid, int new_tid) {
     struct thread *curr=NULL;
-    struct thread *first = NULL;
     // struct thread *newNode = NULL;
     struct container * currContainer = containerList;
     while(currContainer != NULL)
     {
       if(currContainer->cid == curr_cid)
       {
-        first = currContainer->headThread;
+        // first = currContainer->headThread;
         break;
       }
       currContainer = currContainer->next;
@@ -94,16 +93,16 @@ void addThread (int curr_cid, int new_tid) {
     newNode->current_thread = current;
     newNode->tid = new_tid;
     newNode->next = NULL;
-    if(first == NULL)
+    if(currContainer->headThread == NULL)
       {
           printk("first is null\n");
-          first=newNode;
+          currContainer->headThread=newNode;
           // newNode=NULL;
           mutex_unlock(&lock);
           return;
       }
    else {
-     curr=first;
+     curr=currContainer->headThread;
      while(curr->next!=NULL)
      {
        if(curr->tid == new_tid)
@@ -243,11 +242,11 @@ void addToContainer(int new_cid, int new_tid)
 }
 
 // print the map
-void printMap(struct container *head)
+void printMap(void)
 {
   printk("\n-----------------------------------------------------------------------------------------------------\n");
   mutex_lock(&lock);
-  if(head == NULL)
+  if(containerList == NULL)
   {
     printk("\nNo containers\n");
     mutex_unlock(&lock);
@@ -256,7 +255,7 @@ void printMap(struct container *head)
   else
   {
     struct thread *currThread;
-    struct container *currContainer = head;
+    struct container *currContainer = containerList;
     while(currContainer != NULL)
     {
       printk("\nCID:\t%d\t",currContainer->cid);
@@ -367,9 +366,9 @@ int processor_container_delete(struct processor_container_cmd __user *user_cmd)
     userInfo = NULL;
     printk("deleting container CID:\t%d\n", curr_cid);
     removeTopThread(curr_cid);
-    // printMap(containerList);
     mutex_unlock(&lock);
     printk("\t\tprocessor_container_delete ****************************\n");
+    printMap();
     return 0;
 }
 
@@ -399,7 +398,7 @@ int processor_container_create(struct processor_container_cmd __user *user_cmd)
      printk("creating CID: %d\tTIP: %d\n",new_cid,new_tid);
      addToContainer(new_cid, new_tid);
      // above function unlocks mutex
-     // printMap(containerList);
+     printMap();
      printk("\t\tprocessor_container_create ****************************\n");
      return 0;
 }
@@ -428,7 +427,7 @@ int processor_container_switch(struct processor_container_cmd __user *user_cmd)
         printk("\ncontainer not found for swapping\n");
         mutex_unlock(&lock);
      }
-     // printMap(containerList);
+     printMap();
      printk("\t\tprocessor_container_switch ****************************\n");
     return 0;
 }
