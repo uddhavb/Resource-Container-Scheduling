@@ -368,7 +368,7 @@ int processor_container_delete(struct processor_container_cmd __user *user_cmd)
     removeTopThread(curr_cid);
     mutex_unlock(&lock);
     printk("\t\tprocessor_container_delete ****************************\n");
-    printMap();
+   // printMap();
     return 0;
 }
 
@@ -398,7 +398,7 @@ int processor_container_create(struct processor_container_cmd __user *user_cmd)
      printk("creating CID: %d\tTIP: %d\n",new_cid,new_tid);
      addToContainer(new_cid, new_tid);
      // above function unlocks mutex
-     printMap();
+    // printMap();
      printk("\t\tprocessor_container_create ****************************\n");
      return 0;
 }
@@ -427,7 +427,7 @@ int processor_container_switch(struct processor_container_cmd __user *user_cmd)
         printk("\ncontainer not found for swapping\n");
         mutex_unlock(&lock);
      }
-     printMap();
+    // printMap();
      printk("\t\tprocessor_container_switch ****************************\n");
     return 0;
 }
